@@ -1,0 +1,377 @@
+-- 1. Replace 'StizDB' with your database name if different
+-- 2. Execute in SQL Server Management Studio or with sqlcmd
+
+-- Set database context
+USE [StizDB]  -- Replace with your database name
+GO
+
+-- Create BigData1 Table and Stored Procedure
+IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'BigData')
+BEGIN
+    CREATE TABLE [dbo].[BigData] (
+        [Id] BIGINT IDENTITY(1,1) PRIMARY KEY,
+        [Data] CHAR(8000)
+    )
+    PRINT 'Created table BigData'
+END
+GO
+
+IF OBJECT_ID('dbo.GenerateBigData', 'P') IS NOT NULL
+    DROP PROCEDURE dbo.GenerateBigData
+GO
+
+CREATE PROCEDURE GenerateBigData
+    @BatchSize INT = 100000
+AS
+BEGIN
+    SET NOCOUNT ON;
+    DECLARE @StartTime DATETIME = GETDATE();
+    DECLARE @InsertCount BIGINT = 0;
+    
+    WHILE (1=1)  -- Infinite loop
+    BEGIN
+        -- Insert batch with minimal logging
+        INSERT INTO [dbo].[BigData] WITH (TABLOCK) ([Data])
+        SELECT TOP (@BatchSize) 
+            CAST(REPLICATE(
+                CHAR(65 + (ABS(CHECKSUM(NEWID())) % 26)), 
+                8000
+            ) AS CHAR(8000))
+        FROM sys.all_columns a 
+        CROSS JOIN sys.all_columns b;
+        
+        SET @InsertCount = @InsertCount + @@ROWCOUNT;
+        
+        -- Optional: Log progress every 10 batches
+        IF @InsertCount % (@BatchSize * 10) = 0
+        BEGIN
+            RAISERROR('GenerateBigData: Inserted %d rows', 0, 1, @InsertCount) WITH NOWAIT;
+        END
+    END
+END
+GO
+
+-- Create BigData2 Table and Stored Procedure
+IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'BigData2')
+BEGIN
+    CREATE TABLE [dbo].[BigData2] (
+        [Id] BIGINT IDENTITY(1,1) PRIMARY KEY,
+        [Data] CHAR(8000)
+    )
+    PRINT 'Created table BigData2'
+END
+GO
+
+IF OBJECT_ID('dbo.GenerateBigData2', 'P') IS NOT NULL
+    DROP PROCEDURE dbo.GenerateBigData2
+GO
+
+CREATE PROCEDURE GenerateBigData2
+    @BatchSize INT = 100000
+AS
+BEGIN
+    SET NOCOUNT ON;
+    DECLARE @StartTime DATETIME = GETDATE();
+    DECLARE @InsertCount BIGINT = 0;
+    
+    WHILE (1=1)  -- Infinite loop
+    BEGIN
+        -- Insert batch with minimal logging
+        INSERT INTO [dbo].[BigData2] WITH (TABLOCK) ([Data])
+        SELECT TOP (@BatchSize) 
+            CAST(REPLICATE(
+                CHAR(65 + (ABS(CHECKSUM(NEWID())) % 26)), 
+                8000
+            ) AS CHAR(8000))
+        FROM sys.all_columns a 
+        CROSS JOIN sys.all_columns b;
+        
+        SET @InsertCount = @InsertCount + @@ROWCOUNT;
+        
+        -- Optional: Log progress every 10 batches
+        IF @InsertCount % (@BatchSize * 10) = 0
+        BEGIN
+            RAISERROR('GenerateBigData2: Inserted %d rows', 0, 1, @InsertCount) WITH NOWAIT;
+        END
+    END
+END
+GO
+
+-- Create BigData3 Table and Stored Procedure
+IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'BigData3')
+BEGIN
+    CREATE TABLE [dbo].[BigData3] (
+        [Id] BIGINT IDENTITY(1,1) PRIMARY KEY,
+        [Data] CHAR(8000)
+    )
+    PRINT 'Created table BigData3'
+END
+GO
+
+IF OBJECT_ID('dbo.GenerateBigData3', 'P') IS NOT NULL
+    DROP PROCEDURE dbo.GenerateBigData3
+GO
+
+CREATE PROCEDURE GenerateBigData3
+    @BatchSize INT = 100000
+AS
+BEGIN
+    SET NOCOUNT ON;
+    DECLARE @StartTime DATETIME = GETDATE();
+    DECLARE @InsertCount BIGINT = 0;
+    
+    WHILE (1=1)  -- Infinite loop
+    BEGIN
+        -- Insert batch with minimal logging
+        INSERT INTO [dbo].[BigData3] WITH (TABLOCK) ([Data])
+        SELECT TOP (@BatchSize) 
+            CAST(REPLICATE(
+                CHAR(65 + (ABS(CHECKSUM(NEWID())) % 26)), 
+                8000
+            ) AS CHAR(8000))
+        FROM sys.all_columns a 
+        CROSS JOIN sys.all_columns b;
+        
+        SET @InsertCount = @InsertCount + @@ROWCOUNT;
+        
+        -- Optional: Log progress every 10 batches
+        IF @InsertCount % (@BatchSize * 10) = 0
+        BEGIN
+            RAISERROR('GenerateBigData3: Inserted %d rows', 0, 1, @InsertCount) WITH NOWAIT;
+        END
+    END
+END
+GO
+
+-- Create BigData4 Table and Stored Procedure
+IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'BigData4')
+BEGIN
+    CREATE TABLE [dbo].[BigData4] (
+        [Id] BIGINT IDENTITY(1,1) PRIMARY KEY,
+        [Data] CHAR(8000)
+    )
+    PRINT 'Created table BigData4'
+END
+GO
+
+IF OBJECT_ID('dbo.GenerateBigData4', 'P') IS NOT NULL
+    DROP PROCEDURE dbo.GenerateBigData4
+GO
+
+CREATE PROCEDURE GenerateBigData4
+    @BatchSize INT = 100000
+AS
+BEGIN
+    SET NOCOUNT ON;
+    DECLARE @StartTime DATETIME = GETDATE();
+    DECLARE @InsertCount BIGINT = 0;
+    
+    WHILE (1=1)  -- Infinite loop
+    BEGIN
+        -- Insert batch with minimal logging
+        INSERT INTO [dbo].[BigData4] WITH (TABLOCK) ([Data])
+        SELECT TOP (@BatchSize) 
+            CAST(REPLICATE(
+                CHAR(65 + (ABS(CHECKSUM(NEWID())) % 26)), 
+                8000
+            ) AS CHAR(8000))
+        FROM sys.all_columns a 
+        CROSS JOIN sys.all_columns b;
+        
+        SET @InsertCount = @InsertCount + @@ROWCOUNT;
+        
+        -- Optional: Log progress every 10 batches
+        IF @InsertCount % (@BatchSize * 10) = 0
+        BEGIN
+            RAISERROR('GenerateBigData4: Inserted %d rows', 0, 1, @InsertCount) WITH NOWAIT;
+        END
+    END
+END
+GO
+
+-- Create BigData5 Table and Stored Procedure
+IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'BigData5')
+BEGIN
+    CREATE TABLE [dbo].[BigData5] (
+        [Id] BIGINT IDENTITY(1,1) PRIMARY KEY,
+        [Data] CHAR(8000)
+    )
+    PRINT 'Created table BigData5'
+END
+GO
+
+IF OBJECT_ID('dbo.GenerateBigData5', 'P') IS NOT NULL
+    DROP PROCEDURE dbo.GenerateBigData5
+GO
+
+CREATE PROCEDURE GenerateBigData5
+    @BatchSize INT = 100000
+AS
+BEGIN
+    SET NOCOUNT ON;
+    DECLARE @StartTime DATETIME = GETDATE();
+    DECLARE @InsertCount BIGINT = 0;
+    
+    WHILE (1=1)  -- Infinite loop
+    BEGIN
+        -- Insert batch with minimal logging
+        INSERT INTO [dbo].[BigData5] WITH (TABLOCK) ([Data])
+        SELECT TOP (@BatchSize) 
+            CAST(REPLICATE(
+                CHAR(65 + (ABS(CHECKSUM(NEWID())) % 26)), 
+                8000
+            ) AS CHAR(8000))
+        FROM sys.all_columns a 
+        CROSS JOIN sys.all_columns b;
+        
+        SET @InsertCount = @InsertCount + @@ROWCOUNT;
+        
+        -- Optional: Log progress every 10 batches
+        IF @InsertCount % (@BatchSize * 10) = 0
+        BEGIN
+            RAISERROR('GenerateBigData5: Inserted %d rows', 0, 1, @InsertCount) WITH NOWAIT;
+        END
+    END
+END
+GO
+
+-- Create BigData6 Table and Stored Procedure
+IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'BigData6')
+BEGIN
+    CREATE TABLE [dbo].[BigData6] (
+        [Id] BIGINT IDENTITY(1,1) PRIMARY KEY,
+        [Data] CHAR(8000)
+    )
+    PRINT 'Created table BigData6'
+END
+GO
+
+IF OBJECT_ID('dbo.GenerateBigData6', 'P') IS NOT NULL
+    DROP PROCEDURE dbo.GenerateBigData6
+GO
+
+CREATE PROCEDURE GenerateBigData6
+    @BatchSize INT = 100000
+AS
+BEGIN
+    SET NOCOUNT ON;
+    DECLARE @StartTime DATETIME = GETDATE();
+    DECLARE @InsertCount BIGINT = 0;
+    
+    WHILE (1=1)  -- Infinite loop
+    BEGIN
+        -- Insert batch with minimal logging
+        INSERT INTO [dbo].[BigData6] WITH (TABLOCK) ([Data])
+        SELECT TOP (@BatchSize) 
+            CAST(REPLICATE(
+                CHAR(65 + (ABS(CHECKSUM(NEWID())) % 26)), 
+                8000
+            ) AS CHAR(8000))
+        FROM sys.all_columns a 
+        CROSS JOIN sys.all_columns b;
+        
+        SET @InsertCount = @InsertCount + @@ROWCOUNT;
+        
+        -- Optional: Log progress every 10 batches
+        IF @InsertCount % (@BatchSize * 10) = 0
+        BEGIN
+            RAISERROR('GenerateBigData6: Inserted %d rows', 0, 1, @InsertCount) WITH NOWAIT;
+        END
+    END
+END
+GO
+
+-- Create BigData7 Table and Stored Procedure
+IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'BigData7')
+BEGIN
+    CREATE TABLE [dbo].[BigData7] (
+        [Id] BIGINT IDENTITY(1,1) PRIMARY KEY,
+        [Data] CHAR(8000)
+    )
+    PRINT 'Created table BigData7'
+END
+GO
+
+IF OBJECT_ID('dbo.GenerateBigData7', 'P') IS NOT NULL
+    DROP PROCEDURE dbo.GenerateBigData7
+GO
+
+CREATE PROCEDURE GenerateBigData7
+    @BatchSize INT = 100000
+AS
+BEGIN
+    SET NOCOUNT ON;
+    DECLARE @StartTime DATETIME = GETDATE();
+    DECLARE @InsertCount BIGINT = 0;
+    
+    WHILE (1=1)  -- Infinite loop
+    BEGIN
+        -- Insert batch with minimal logging
+        INSERT INTO [dbo].[BigData7] WITH (TABLOCK) ([Data])
+        SELECT TOP (@BatchSize) 
+            CAST(REPLICATE(
+                CHAR(65 + (ABS(CHECKSUM(NEWID())) % 26)), 
+                8000
+            ) AS CHAR(8000))
+        FROM sys.all_columns a 
+        CROSS JOIN sys.all_columns b;
+        
+        SET @InsertCount = @InsertCount + @@ROWCOUNT;
+        
+        -- Optional: Log progress every 10 batches
+        IF @InsertCount % (@BatchSize * 10) = 0
+        BEGIN
+            RAISERROR('GenerateBigData7: Inserted %d rows', 0, 1, @InsertCount) WITH NOWAIT;
+        END
+    END
+END
+GO
+
+-- Create BigData8 Table and Stored Procedure
+IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'BigData8')
+BEGIN
+    CREATE TABLE [dbo].[BigData8] (
+        [Id] BIGINT IDENTITY(1,1) PRIMARY KEY,
+        [Data] CHAR(8000)
+    )
+    PRINT 'Created table BigData8'
+END
+GO
+
+IF OBJECT_ID('dbo.GenerateBigData8', 'P') IS NOT NULL
+    DROP PROCEDURE dbo.GenerateBigData8
+GO
+
+CREATE PROCEDURE GenerateBigData8
+    @BatchSize INT = 100000
+AS
+BEGIN
+    SET NOCOUNT ON;
+    DECLARE @StartTime DATETIME = GETDATE();
+    DECLARE @InsertCount BIGINT = 0;
+    
+    WHILE (1=1)  -- Infinite loop
+    BEGIN
+        -- Insert batch with minimal logging
+        INSERT INTO [dbo].[BigData8] WITH (TABLOCK) ([Data])
+        SELECT TOP (@BatchSize) 
+            CAST(REPLICATE(
+                CHAR(65 + (ABS(CHECKSUM(NEWID())) % 26)), 
+                8000
+            ) AS CHAR(8000))
+        FROM sys.all_columns a 
+        CROSS JOIN sys.all_columns b;
+        
+        SET @InsertCount = @InsertCount + @@ROWCOUNT;
+        
+        -- Optional: Log progress every 10 batches
+        IF @InsertCount % (@BatchSize * 10) = 0
+        BEGIN
+            RAISERROR('GenerateBigData8: Inserted %d rows', 0, 1, @InsertCount) WITH NOWAIT;
+        END
+    END
+END
+GO
+
+PRINT 'All database objects created successfully!'
+GO
