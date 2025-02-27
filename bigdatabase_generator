@@ -1,0 +1,150 @@
+# Configurable parameters - Edit these to match your environment
+param(
+    [string]$server = "localhost",          # Default to localhost, change as needed
+    [string]$database = "StizDB",           # Database name
+    [int]$threadsPerProc = 4,               # Threads per stored procedure
+    [int]$batchSize = 100000,               # Batch size for each procedure call
+    [switch]$createTables                   # Use this switch to create tables/procs
+)
+
+# Create connection string with TrustServerCertificate option
+$connectionParams = "-S $server -d $database -E -b -C -t 600"
+
+# Configuration for all eight tables
+$configs = @(
+    @{
+        ProcName = "GenerateBigData"
+        TableName = "BigData"
+    },
+    @{
+        ProcName = "GenerateBigData2"
+        TableName = "BigData2"
+    },
+    @{
+        ProcName = "GenerateBigData3"
+        TableName = "BigData3"
+    },
+    @{
+        ProcName = "GenerateBigData4"
+        TableName = "BigData4"
+    },
+    @{
+        ProcName = "GenerateBigData5"
+        TableName = "BigData5"
+    },
+    @{
+        ProcName = "GenerateBigData6"
+        TableName = "BigData6"
+    },
+    @{
+        ProcName = "GenerateBigData7"
+        TableName = "BigData7"
+    },
+    @{
+        ProcName = "GenerateBigData8"
+        TableName = "BigData8"
+    }
+)
+
+# Create tables and stored procedures if requested
+if ($createTables) {
+    Write-Host "Creating database objects... This may take a moment." -ForegroundColor Yellow
+    
+    # SQL script to create all tables and procedures
+    $sqlScript = @"
+USE [$database]
+GO
+"@
+
+    # Add all table and procedure creation
+    foreach ($config in $configs) {
+        $sqlScript += @"
+IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = '$($config.TableName)')
+BEGIN
+    CREATE TABLE [dbo].[$($config.TableName)] (
+        [Id] BIGINT IDENTITY(1,1) PRIMARY KEY,
+        [Data] CHAR(8000)
+    )
+    PRINT 'Created table $($config.TableName)'
+END
+GO
+IF OBJECT_ID('dbo.$($config.ProcName)', 'P') IS NOT NULL
+    DROP PROCEDURE dbo.$($config.ProcName)
+GO
+CREATE PROCEDURE $($config.ProcName)
+    @BatchSize INT = 100000
+AS
+BEGIN
+    SET NOCOUNT ON;
+    DECLARE @StartTime DATETIME = GETDATE();
+    DECLARE @InsertCount BIGINT = 0;
+    
+    WHILE (1=1)  -- Infinite loop
+    BEGIN
+        -- Insert batch with minimal logging
+        INSERT INTO [dbo].[$($config.TableName)] WITH (TABLOCK) ([Data])
+        SELECT TOP (@BatchSize) 
+            CAST(REPLICATE(
+                CHAR(65 + (ABS(CHECKSUM(NEWID())) % 26)), 
+                8000
+            ) AS CHAR(8000))
+        FROM sys.all_columns a 
+        CROSS JOIN sys.all_columns b;
+        
+        SET @InsertCount = @InsertCount + @@ROWCOUNT;
+        
+        -- Optional: Log progress every 10 batches
+        IF @InsertCount % (@BatchSize * 10) = 0
+        BEGIN
+            RAISERROR('$($config.ProcName): Inserted %d rows', 0, 1, @InsertCount) WITH NOWAIT;
+        END
+    END
+END
+GO
+"@
+    }
+
+    # Execute the SQL script to create all tables and procedures
+    $tempFile = [System.IO.Path]::GetTempFileName() + ".sql"
+    $sqlScript | Out-File -FilePath $tempFile -Encoding utf8
+    sqlcmd -S $server -d $database -i $tempFile -E
+    Remove-Item $tempFile
+    
+    Write-Host "Database objects created successfully!" -ForegroundColor Green
+}
+
+# Launch jobs for all procedures
+$jobs = @()
+
+foreach ($config in $configs) {
+    for ($i = 1; $i -le $threadsPerProc; $i++) {
+        $jobId = "$($config.ProcName)_$i"
+        $job = Start-Job -Name $jobId -ScriptBlock {
+            param($server, $database, $procName, $batchSize)
+            
+            $result = sqlcmd -S $server -d $database -Q "EXEC $procName @BatchSize=$batchSize" -b -C
+            return @{
+                ProcName = $procName
+                Output = $result
+            }
+        } -ArgumentList $server, $database, $config.ProcName, $batchSize
+        
+        $jobs += $job
+    }
+}
+
+# Start the jobs without monitoring
+Write-Host "Started data generation with $($jobs.Count) parallel jobs across $($configs.Count) tables" -ForegroundColor Green
+Write-Host "Server: $server, Database: $database, BatchSize: $batchSize" -ForegroundColor Green
+Write-Host "Jobs are running in the background. Use Get-Job to check status." -ForegroundColor Yellow
+# Display job management options
+Write-Host "`nManagement Options:"
+Write-Host "1. View job status: Get-Job | Format-Table Name, State, HasMoreData"
+Write-Host "2. Get job output: Get-Job -Name 'JobName' | Receive-Job"
+Write-Host "3. Stop all jobs: Get-Job | Stop-Job"
+Write-Host "4. Stop specific job: Stop-Job -Name 'JobName'"
+Write-Host "5. Clean up completed jobs: Get-Job | Remove-Job"
+
+# Display current job status
+Write-Host "`nCurrent Job Status:"
+Get-Job | Group-Object State | Format-Table Name, Count -AutoSize
