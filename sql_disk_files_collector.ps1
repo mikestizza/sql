@@ -12,6 +12,7 @@
   Run as Administrator.
   Requires the SqlServer PowerShell module (for Invoke-Sqlcmd).
 #>
+# Version 1.0
 
 param(
     [Parameter(Mandatory=$false)]
