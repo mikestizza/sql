@@ -1,6 +1,7 @@
 #!/bin/bash
 # Robust Cluster-Wide SQL Disk Mapper for Nutanix
 # Maps SQL files to vDisks across all CVMs in a cluster
+# Version 1.0
 
 # Colors for output
 GREEN='\033[0;32m'
