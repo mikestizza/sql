@@ -31,11 +31,13 @@ A robust cluster-wide tool for mapping SQL database files to their underlying Nu
 ./sql_disk_mapper.sh
 ```
 
-2. When prompted, paste the SQL database file information from Windows, then type `DONE` on a new line.
+2. When prompted, paste the SQL database section information from Windows, then type `DONE` on a new line.
 
 Example input format:
 
 ```
+DATABASE FILES
+----------------------------------------------
 DATABASE: MyDatabase
     File: C:\Data\MyDatabase.mdf
     Disk Number: 1
