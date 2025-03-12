@@ -114,11 +114,11 @@ Direct T-SQL script for creating test tables and stored procedures.
 
 ## How It Works
 
-### SQL Disk Mapper
+### SQL Disk Collector & Mapper
 
 1. Collects SQL database file information from Windows
 2. Identifies all CVMs in the Nutanix cluster
-3. Gathers vDisk information from each CVM using multiple methods
+3. Gathers vDisk information from each CVM using multiple methods 
 4. Maps Windows disk information to vDisk IDs using:
    - NFS path matching
    - UUID matching
