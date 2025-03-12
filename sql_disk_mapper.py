@@ -1,7 +1,6 @@
 #!/bin/bash
 # Robust Cluster-Wide SQL Disk Mapper for Nutanix
 # Maps SQL files to vDisks across all CVMs in a cluster
-# Version 1.0
 
 # Colors for output
 GREEN='\033[0;32m'
@@ -16,7 +15,7 @@ echo -e "This script maps SQL files to Nutanix vDisks across all CVMs in the clu
 
 # Prompt for Windows disk info instead of reading from a file
 echo -e "\n${YELLOW}Please paste your SQL DATABASE FILES information below${NC}"
-echo -e "${YELLOW}After pasting, type '${BOLD}DONE${NC}${YELLOW}' on a new line and press Enter:${NC}"
+echo -e "${YELLOW}After pasting, type ${BOLD}DONE${NC}${YELLOW} on a new line and press Enter${NC}"
 echo -e "${YELLOW}----------------------------------------${NC}"
 
 # Create a temporary file to store user input
@@ -25,11 +24,15 @@ TMP_DISK_INFO="/tmp/windows_disk_info_temp.txt"
 
 # Read user input line by line until DONE is encountered
 while IFS= read -r line; do
-    if [ "$line" = "DONE" ]; then
+    if [[ "$line" == "DONE" ]]; then
+        echo -e "${GREEN}Input collection complete.${NC}"
         break
     fi
     echo "$line" >> $TMP_DISK_INFO
 done
+
+# Debug information
+echo -e "${YELLOW}Received $(wc -l < $TMP_DISK_INFO) lines of input${NC}"
 
 # Check if input is empty
 if [ ! -s "$TMP_DISK_INFO" ]; then
@@ -76,33 +79,14 @@ for ip in $CVM_IPS; do
     echo -e "Collecting data from CVM: ${ip}"
     echo "================== $ip ==================" >> /tmp/all_vdisks.txt
     
-    # Method 1: Using links to dump the hosted_vdisks page
-    ssh nutanix@$ip "links --dump http:0:2009/hosted_vdisks" > "$DEBUG_DIR/vdisks_$ip.txt" 2>"$DEBUG_DIR/error_$ip.log"
+    # Use storage_policy page to get vDisk information (more reliable)
+    ssh nutanix@$ip "links --dump http:0:2009/storage_policy" > "$DEBUG_DIR/vdisks_$ip.txt" 2>"$DEBUG_DIR/error_$ip.log"
     if [ $? -eq 0 ] && [ -s "$DEBUG_DIR/vdisks_$ip.txt" ]; then
         cat "$DEBUG_DIR/vdisks_$ip.txt" >> /tmp/all_vdisks.txt
-        echo -e "${GREEN}Successfully collected vDisks using method 1${NC}"
+        echo -e "${GREEN}Successfully collected vDisks from storage_policy page${NC}"
     else
-        echo -e "${YELLOW}Method 1 failed, trying method 2...${NC}"
-        
-        # Method 2: Using curl to get the data
-        ssh nutanix@$ip "curl -s http://0:2009/hosted_vdisks" > "$DEBUG_DIR/vdisks_curl_$ip.txt" 2>>"$DEBUG_DIR/error_$ip.log"
-        if [ $? -eq 0 ] && [ -s "$DEBUG_DIR/vdisks_curl_$ip.txt" ]; then
-            cat "$DEBUG_DIR/vdisks_curl_$ip.txt" >> /tmp/all_vdisks.txt
-            echo -e "${GREEN}Successfully collected vDisks using method 2${NC}"
-        else
-            echo -e "${YELLOW}Method 2 failed, trying method 3...${NC}"
-            
-            # Method 3: Direct API call for vDisks
-            ssh nutanix@$ip "curl -s http://0:2009/api/vdisks/" > "$DEBUG_DIR/vdisks_api_$ip.txt" 2>>"$DEBUG_DIR/error_$ip.log"
-            if [ $? -eq 0 ] && [ -s "$DEBUG_DIR/vdisks_api_$ip.txt" ]; then
-                echo "API DATA FOLLOWS:" >> /tmp/all_vdisks.txt
-                cat "$DEBUG_DIR/vdisks_api_$ip.txt" >> /tmp/all_vdisks.txt
-                echo -e "${GREEN}Successfully collected vDisks using method 3${NC}"
-            else
-                echo -e "${RED}All methods failed for CVM $ip. See error logs in $DEBUG_DIR${NC}"
-                echo "COLLECTION FAILED FOR THIS CVM" >> /tmp/all_vdisks.txt
-            fi
-        fi
+        echo -e "${RED}Failed to collect vDisks from CVM $ip. See error logs in $DEBUG_DIR${NC}"
+        echo "COLLECTION FAILED FOR THIS CVM" >> /tmp/all_vdisks.txt
     fi
 done
 
@@ -150,6 +134,11 @@ def extract_sql_files(disk_info_path):
     try:
         with open(disk_info_path, 'r') as f:
             content = f.read()
+            
+        # Debug: output first 500 chars of file content
+        print(f"{YELLOW}First 500 chars of input file:{END}")
+        print(content[:500])
+        print(f"{YELLOW}Total input size: {len(content)} characters{END}")
     except Exception as e:
         print(f"{RED}Error reading Windows disk info: {e}{END}")
         return None, None
@@ -158,7 +147,10 @@ def extract_sql_files(disk_info_path):
     db_files = []
     db_pattern = re.compile(r'DATABASE: ([^\n]+)\n\s+File: ([^\n]+)(?:\n\s+Mapping Method:[^\n]+)?\n\s+Disk Number:[ ]?(\d*)\n\s+Disk Serial: ([^\n]+)\n\s+Disk UniqueId: ([^\n]+)', re.DOTALL)
     
-    for match in db_pattern.finditer(content):
+    matches = list(db_pattern.finditer(content))
+    print(f"{YELLOW}Found {len(matches)} database entries in input{END}")
+    
+    for match in matches:
         db_name = match.group(1).strip()
         file_path = match.group(2).strip()
         disk_number = match.group(3).strip() if match.group(3) else None
@@ -186,6 +178,7 @@ def extract_sql_files(disk_info_path):
         }
         
         db_files.append(file_info)
+        print(f"  - {db_name}: {file_path} ({file_type}) on Disk {disk_number}")
     
     # Group files by disk
     disks = {}
@@ -203,14 +196,73 @@ def extract_sql_files(disk_info_path):
     
     print(f"{GREEN}Found {len(db_files)} SQL files on {len(disks)} disks{END}")
     
+    # If no files were found, try a more lenient pattern
+    if not db_files:
+        print(f"{YELLOW}No SQL files found with standard pattern, trying alternative parser...{END}")
+        
+        # Alternative pattern that's more lenient
+        alt_pattern = re.compile(r'DATABASE:\s+(\S+).*?File:\s+([^\n]+).*?Disk Number:\s*(\d*).*?Disk Serial:\s+([^\n]+).*?Disk UniqueId:\s+([^\n]+)', re.DOTALL)
+        
+        matches = list(alt_pattern.finditer(content))
+        print(f"{YELLOW}Found {len(matches)} database entries with alternative pattern{END}")
+        
+        for match in matches:
+            db_name = match.group(1).strip()
+            file_path = match.group(2).strip()
+            disk_number = match.group(3).strip() if match.group(3) else None
+            disk_serial = match.group(4).strip()
+            disk_unique_id = match.group(5).strip()
+            
+            # Determine file type from extension
+            file_type = "UNKNOWN"
+            if file_path.lower().endswith('.mdf'):
+                file_type = "PRIMARY"
+            elif file_path.lower().endswith('.ndf'):
+                file_type = "SECONDARY"
+            elif file_path.lower().endswith('.ldf'):
+                file_type = "LOG"
+            elif "log" in file_path.lower():
+                file_type = "LOG"
+            
+            file_info = {
+                'database': db_name,
+                'path': file_path,
+                'type': file_type,
+                'disk_number': disk_number,
+                'disk_serial': disk_serial,
+                'disk_unique_id': disk_unique_id
+            }
+            
+            db_files.append(file_info)
+            print(f"  - {db_name}: {file_path} ({file_type}) on Disk {disk_number}")
+        
+        # Regroup files by disk
+        disks = {}
+        for file in db_files:
+            disk_number = file.get('disk_number')
+            if disk_number:
+                if disk_number not in disks:
+                    disks[disk_number] = {
+                        'disk_number': disk_number,
+                        'serial': file.get('disk_serial'),
+                        'unique_id': file.get('disk_unique_id'),
+                        'files': []
+                    }
+                disks[disk_number]['files'].append(file)
+        
+        print(f"{GREEN}Found {len(db_files)} SQL files on {len(disks)} disks with alternative parser{END}")
+    
     # Save for debugging
     with open(f"{DEBUG_DIR}/sql_files.json", 'w') as f:
         json.dump(db_files, f, indent=2)
     
+    with open(f"{DEBUG_DIR}/input_content.txt", 'w') as f:
+        f.write(content)
+    
     return disks, db_files
 
 def extract_vdisks_from_all_cvms():
-    """Extract vDisks from all CVMs in the cluster"""
+    """Extract vDisks from all CVMs in the cluster using storage_policy page data"""
     print(f"\n{BOLD}{YELLOW}Extracting Nutanix vDisk information from ALL CVMs{END}")
     print(f"{YELLOW}{'-' * 80}{END}")
     
@@ -220,7 +272,7 @@ def extract_vdisks_from_all_cvms():
             content = f.read()
     except Exception as e:
         print(f"{RED}Error reading cluster-wide vDisks info: {e}{END}")
-        return None, None
+        return None, None, None
     
     # Split by CVM sections
     cvm_sections = re.split(r'={18} ([\d\.]+) ={18}', content)
@@ -244,93 +296,42 @@ def extract_vdisks_from_all_cvms():
         
         print(f"{GREEN}Processing vDisks on CVM: {cvm_ip}{END}")
         
-        # Check if we have API data
-        if "API DATA FOLLOWS:" in section_content:
-            # Process API JSON data
-            try:
-                json_start = section_content.find('{')
-                if json_start >= 0:
-                    json_data = section_content[json_start:]
-                    data = json.loads(json_data)
-                    
-                    if "entities" in data:
-                        for entity in data["entities"]:
-                            vdisk_id = str(entity.get("vdisk_id"))
-                            uuid = entity.get("vdisk_uuid", "").strip('"')
-                            nfs_info = entity.get("nfs_file_location", {})
-                            
-                            if nfs_info:
-                                vol = nfs_info.get("volume", "")
-                                container = nfs_info.get("container", "")
-                                objid = nfs_info.get("file_id", "")
-                                
-                                nfs_address = f"NFS:{vol}:{container}:{objid}"
-                                nfs_address_underscore = f"NFS_{vol}_{container}_{objid}"
-                                
-                                vdisk = {
-                                    'vdisk_id': vdisk_id,
-                                    'uuid': uuid,
-                                    'nfs_address': nfs_address,
-                                    'nfs_address_underscore': nfs_address_underscore,
-                                    'host_cvm': cvm_ip
-                                }
-                                
-                                # Add to lookups
-                                vdisks_lookup[vdisk_id] = vdisk
-                                vdisks_lookup[uuid] = vdisk
-                                vdisks_lookup[nfs_address] = vdisk
-                                vdisks_lookup[nfs_address_underscore] = vdisk
-                                
-                                all_vdisks.append(vdisk)
-                                
-                                # Add to CVM tracking
-                                if cvm_ip not in vdisks_by_cvm:
-                                    vdisks_by_cvm[cvm_ip] = []
-                                vdisks_by_cvm[cvm_ip].append(vdisk)
-                    
-                    print(f"  Found {len(vdisks_by_cvm.get(cvm_ip, []))} vDisks on CVM {cvm_ip}")
-            except Exception as e:
-                print(f"{RED}Error parsing API data from CVM {cvm_ip}: {e}{END}")
-                with open(f"{DEBUG_DIR}/api_error_{cvm_ip}.txt", 'w') as f:
-                    f.write(section_content)
-        else:
-            # Process regular hosted_vdisks output
-            cvm_vdisks = []
+        if "COLLECTION FAILED FOR THIS CVM" in section_content:
+            print(f"{YELLOW}Skipping CVM {cvm_ip} due to collection failure{END}")
+            continue
+        
+        # Initialize vDisks for this CVM
+        cvm_vdisks = []
+        
+        # Process the storage_policy table format
+        # Look for the Hosted vdisks section
+        hosted_section_match = re.search(r'Hosted vdisks.*?\n(.*?)(?:\n\n|\Z)', section_content, re.DOTALL)
+        
+        if hosted_section_match:
+            table_section = hosted_section_match.group(1)
             
-            # Split content into lines
-            lines = section_content.split('\n')
+            # Extract table rows
+            # The pattern matches lines with vDisk ID, vDisk Name (NFS path), and Storage Policy ID
+            vdisk_pattern = re.compile(r'\|\s*(\d+)\s*\|\s*(NFS:\d+:\d+:\d+)\s*\|', re.MULTILINE)
             
-            # Process line by line to extract vDisks
-            i = 0
-            while i < len(lines) - 1:  # Need at least 2 lines for vdisk & uuid
-                line = lines[i]
+            for match in vdisk_pattern.finditer(table_section):
+                vdisk_id = match.group(1).strip()
+                nfs_address = match.group(2).strip()
                 
-                # Look for vDisk ID pattern
-                vdisk_match = re.search(r'\[\d+\](\d+)\s*\|', line)
-                # Look for NFS pattern
-                nfs_match = re.search(r'NFS:(\d+):(\d+):(\d+)', line)
-                
-                if vdisk_match and nfs_match:
-                    vdisk_id = vdisk_match.group(1)
+                # Parse NFS address components
+                nfs_match = re.match(r'NFS:(\d+):(\d+):(\d+)', nfs_address)
+                if nfs_match:
                     vol = nfs_match.group(1)
                     container = nfs_match.group(2)
                     objid = nfs_match.group(3)
                     
-                    nfs_address = f"NFS:{vol}:{container}:{objid}"
+                    # Create underscore version for matching
                     nfs_address_underscore = f"NFS_{vol}_{container}_{objid}"
                     
-                    # Try to get UUID from next line
-                    uuid = None
-                    if i+1 < len(lines):
-                        next_line = lines[i+1]
-                        uuid_match = re.search(r'\(\s*([\w-]+)\s*\)', next_line)
-                        if uuid_match:
-                            uuid = uuid_match.group(1)
-                    
-                    # Create vDisk entry
+                    # Create vDisk entry - note we don't have UUID in this format
                     vdisk = {
                         'vdisk_id': vdisk_id,
-                        'uuid': uuid,
+                        'uuid': None,  # Storage policy page doesn't show UUID
                         'nfs_address': nfs_address,
                         'nfs_address_underscore': nfs_address_underscore,
                         'host_cvm': cvm_ip
@@ -338,22 +339,15 @@ def extract_vdisks_from_all_cvms():
                     
                     # Add to lookups
                     vdisks_lookup[vdisk_id] = vdisk
-                    if uuid:
-                        vdisks_lookup[uuid] = vdisk
                     vdisks_lookup[nfs_address] = vdisk
                     vdisks_lookup[nfs_address_underscore] = vdisk
                     
                     all_vdisks.append(vdisk)
                     cvm_vdisks.append(vdisk)
-                    
-                    # Skip next line as we've processed it for UUID
-                    i += 1
-                
-                i += 1
-            
-            # Add to CVM tracking
-            vdisks_by_cvm[cvm_ip] = cvm_vdisks
-            print(f"  Found {len(cvm_vdisks)} vDisks on CVM {cvm_ip}")
+        
+        # Add to CVM tracking
+        vdisks_by_cvm[cvm_ip] = cvm_vdisks
+        print(f"  Found {len(cvm_vdisks)} vDisks on CVM {cvm_ip}")
     
     # Count unique vDisks
     unique_vdisks = set()
@@ -368,7 +362,7 @@ def extract_vdisks_from_all_cvms():
     
     with open(f"{DEBUG_DIR}/all_vdisks.txt", 'w') as f:
         for vdisk in all_vdisks:
-            f.write(f"vDisk: {vdisk['vdisk_id']}, NFS: {vdisk['nfs_address']}, UUID: {vdisk.get('uuid', 'Unknown')}, CVM: {vdisk['host_cvm']}\n")
+            f.write(f"vDisk: {vdisk['vdisk_id']}, NFS: {vdisk['nfs_address']}, CVM: {vdisk['host_cvm']}\n")
     
     return vdisks_lookup, all_vdisks, vdisks_by_cvm
 
@@ -530,7 +524,7 @@ def generate_report(disks, sql_files, mapped_disks, all_vdisks, vdisks_by_cvm):
     
     # Print unmapped files
     if unmapped_files:
-        print(f"\n{BOLD}{YELLOW}Unmapped Files (Possibly Idle and Unassigned):{END}")
+        print(f"\n{BOLD}{YELLOW}Unmapped Files (possibly on other CVMs):{END}")
         print("-" * 80)
         
         for file in sorted(unmapped_files, key=lambda x: (x['database'], x['path'])):
@@ -603,7 +597,7 @@ def generate_report(disks, sql_files, mapped_disks, all_vdisks, vdisks_by_cvm):
 def main():
     """Main function"""
     print_header("Nutanix SQL Disk Mapper (Cluster-wide)")
-    print(f"{BOLD}Version:{END} 5.1 (Cluster-wide with Interactive Input)")
+    print(f"{BOLD}Version:{END} 5.4 (Cluster-wide with Interactive Input and Improved Parsing)")
     print(f"{BOLD}Execution Time:{END} {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     
     # Get the path to the disk info file from command line argument
