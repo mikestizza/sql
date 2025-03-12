@@ -31,7 +31,7 @@ A robust cluster-wide tool for mapping SQL database files to their underlying Nu
 ./sql_disk_mapper.sh
 ```
 
-2. When prompted, paste the SQL 'DATABASE FILES' section information from Windows, then type `DONE` on a new line.
+2. When prompted, paste the SQL 'DATABASE FILES' section information from Windows, then type `DONE` on a new line and press 'ENTER'.
 
 Example input format:
 
