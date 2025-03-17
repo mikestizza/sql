@@ -524,7 +524,7 @@ def generate_report(disks, sql_files, mapped_disks, all_vdisks, vdisks_by_cvm):
     
     # Print unmapped files
     if unmapped_files:
-        print(f"\n{BOLD}{YELLOW}Unmapped Files (possibly on other CVMs):{END}")
+        print(f"\n{BOLD}{YELLOW}Unmapped Files (typically caused when the vdisk is idle):{END}")
         print("-" * 80)
         
         for file in sorted(unmapped_files, key=lambda x: (x['database'], x['path'])):
