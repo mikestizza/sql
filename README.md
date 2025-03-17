@@ -87,7 +87,6 @@ DATABASE: MyDatabase
 ### SQL Disk Mapper
 
 - If some files remain unmapped, check the debug directory
-- If vDisk collection fails, try running directly on the CVM hosting the vDisks
 - Verify the input format matches the expected pattern
 
 ## SQL Server Data Generator Tools
