@@ -34,7 +34,7 @@ A robust cluster-wide tool for mapping SQL database files to their underlying Nu
 - Python 3.x
 - SSH access between CVMs
 - Links or curl utilities installed on CVMs
-- Run the sql_disk_collector.ps1 script on the Windows OS 
+- Run the sql_disk_files_collector.ps1 script on the Windows OS 
 
 ### Usage
 
