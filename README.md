@@ -39,7 +39,7 @@ A robust cluster-wide tool for mapping SQL database files to their underlying Nu
 ### Usage
 
 1. Run the collector script via powershell on your databse server
-NOTE: Run as Administrator
+NOTE: Run as Administrator (either by login or Right-Click the script to 'Run as Administrator')
 
 ```bash
 ./sql_disk_file_collector.ps1
