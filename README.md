@@ -45,13 +45,13 @@ NOTE: Run as Administrator (either by login or Right-Click the script to 'Run as
 ./sql_disk_file_collector.ps1
 ```
 
-1. Run the script on any CVM in the cluster:
+2. Run the script on any CVM in the cluster:
 
 ```bash
 ./sql_disk_mapper.sh
 ```
 
-2. When prompted, paste the SQL 'DATABASE FILES' section information from Windows, then type `DONE` on a new line and press 'ENTER'.
+3. When prompted, paste the SQL 'DATABASE FILES' section information from Windows, then type `DONE` on a new line and press 'ENTER'.
 
 Example input format:
 
@@ -71,7 +71,7 @@ DATABASE: MyDatabase
     Disk UniqueId: 600-01-0123-8901
 ```
 
-3. The script will:
+4. The script will:
    - Collect vDisk information from all CVMs in the cluster
    - Match Windows disks to Nutanix vDisks
    - Generate reports showing which CVM hosts each database file
