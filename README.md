@@ -2,7 +2,7 @@
 
 A collection of tools for managing and testing SQL Server environments on Nutanix infrastructure.
 
-## 1. Nutanix SQL Disk Mapper
+## Nutanix SQL Disk Mapper
 
 A robust cluster-wide tool for mapping SQL database files to their underlying Nutanix vDisks across all CVMs in a cluster.
 
@@ -14,6 +14,19 @@ A robust cluster-wide tool for mapping SQL database files to their underlying Nu
 - Multiple approaches to match Windows disks to Nutanix vDisks
 - Generates both JSON and CSV reports
 - Comprehensive debug information
+
+## How It Works
+
+### SQL Disk Collector & Mapper
+
+1. Collects SQL database file information from Windows
+2. Identifies all CVMs in the Nutanix cluster
+3. Gathers vDisk information from each CVM using multiple methods 
+4. Maps Windows disk information to vDisk IDs using:
+   - NFS path matching
+   - UUID matching
+   - Object ID matching
+5. Generates reports showing which database files are on which vDisks and CVMs
 
 ### Prerequisites
 
@@ -62,7 +75,15 @@ DATABASE: MyDatabase
 - `/tmp/sql_mapping.csv` - CSV report for easy import into spreadsheets
 - `/tmp/sql_mapper_debug/` - Directory with detailed debug information
 
-## 2. SQL Server Data Generator Tools
+## Troubleshooting
+
+### SQL Disk Mapper
+
+- If some files remain unmapped, check the debug directory
+- If vDisk collection fails, try running directly on the CVM hosting the vDisks
+- Verify the input format matches the expected pattern
+
+## SQL Server Data Generator Tools
 
 Tools for generating test data in SQL Server to test performance and storage growth.
 
@@ -114,17 +135,6 @@ Direct T-SQL script for creating test tables and stored procedures.
 
 ## How It Works
 
-### SQL Disk Collector & Mapper
-
-1. Collects SQL database file information from Windows
-2. Identifies all CVMs in the Nutanix cluster
-3. Gathers vDisk information from each CVM using multiple methods 
-4. Maps Windows disk information to vDisk IDs using:
-   - NFS path matching
-   - UUID matching
-   - Object ID matching
-5. Generates reports showing which database files are on which vDisks and CVMs
-
 ### Data Generator
 
 1. Creates tables with fixed-length `CHAR(8000)` columns
@@ -133,12 +143,6 @@ Direct T-SQL script for creating test tables and stored procedures.
 4. Uses minimal logging and table locking for maximum performance
 
 ## Troubleshooting
-
-### SQL Disk Mapper
-
-- If some files remain unmapped, check the debug directory
-- If vDisk collection fails, try running directly on the CVM hosting the vDisks
-- Verify the input format matches the expected pattern
 
 ### Data Generator
 
